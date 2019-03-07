@@ -1,7 +1,8 @@
 //! Bidirectional type checking of the core syntax
 //!
 //! This is used to verify that the core syntax is correctly formed, for
-//! debugging purposes.
+//! debugging purposes. We assume that all metavariables have been solved by
+//! this stage.
 
 use std::error::Error;
 use std::fmt;
@@ -9,7 +10,7 @@ use std::fmt;
 use crate::nbe::{self, NbeError};
 use crate::syntax::core::{Item, RcTerm, Term};
 use crate::syntax::domain::{RcType, RcValue, Value};
-use crate::syntax::{AppMode, Env, Label, UniverseLevel, VarLevel};
+use crate::syntax::{AppMode, Env, Label, MetaId, UniverseLevel, VarLevel};
 
 /// Local type checking context.
 #[derive(Debug, Clone, PartialEq)]
@@ -91,6 +92,7 @@ pub enum TypeError {
     UnexpectedAppMode { found: AppMode, expected: AppMode },
     TooManyFieldsFound,
     NotEnoughFieldsProvided,
+    UnsolvedMeta(MetaId),
     Nbe(NbeError),
 }
 
@@ -131,6 +133,7 @@ impl fmt::Display for TypeError {
             ),
             TypeError::TooManyFieldsFound => write!(f, "too many fields found"),
             TypeError::NotEnoughFieldsProvided => write!(f, "not enough fields provided"),
+            TypeError::UnsolvedMeta(meta_id) => write!(f, "unsolved metavariable `?{}`", meta_id.0),
             TypeError::Nbe(err) => err.fmt(f),
         }
     }
@@ -244,6 +247,7 @@ pub fn synth_term(context: &Context, term: &RcTerm) -> Result<RcType, TypeError>
             None => Err(TypeError::UnboundVariable),
             Some(ann) => Ok(ann.clone()),
         },
+        Term::Meta(meta_id) => Err(TypeError::UnsolvedMeta(*meta_id)),
         Term::Literal(literal) => unimplemented!("literals {:?}", literal),
         Term::Let(def, body) => {
             let mut body_context = context.clone();

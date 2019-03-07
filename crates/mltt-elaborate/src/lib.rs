@@ -12,7 +12,9 @@
 
 use mltt_concrete::{Arg, IntroParam, Item, Pattern, RecordIntroField, Term, TypeParam};
 use mltt_core::nbe::{self, NbeError};
-use mltt_core::syntax::{core, domain, AppMode, Env, Label, UniverseLevel, VarIndex, VarLevel};
+use mltt_core::syntax::{
+    core, domain, AppMode, Env, Label, MetaId, UniverseLevel, VarIndex, VarLevel,
+};
 
 mod docs;
 mod errors;
@@ -36,6 +38,8 @@ pub struct Context {
     /// Not all entries in the context will have a corresponding name - for
     /// example we don't define a name for non-dependent function types.
     names: im::HashMap<String, VarLevel>,
+    /// Local bound indices. Used for making spines for fresh metas
+    binders: im::Vector<VarLevel>,
 }
 
 impl Context {
@@ -46,6 +50,7 @@ impl Context {
             values: Env::new(),
             tys: Env::new(),
             names: im::HashMap::new(),
+            binders: im::Vector::new(),
         }
     }
 
@@ -91,8 +96,19 @@ impl Context {
         ty: domain::RcType,
     ) -> domain::RcValue {
         let param = domain::RcValue::var(self.level());
+        self.binders.push_front(self.level());
         self.local_define(name, param.clone(), ty);
         param
+    }
+
+    /// Create a fresh meta and return the meta applied to all of the currently
+    /// bound vars.
+    fn new_meta(&mut self, meta_context: &mut domain::MetaContext) -> core::RcTerm {
+        let head = core::RcTerm::from(core::Term::Meta(meta_context.fresh_meta_id()));
+        self.binders.iter().fold(head, |acc, level| {
+            let arg = core::RcTerm::from(core::Term::Var(VarIndex(self.level.0 - (level.0 + 1))));
+            core::RcTerm::from(core::Term::FunElim(acc, AppMode::Explicit, arg))
+        })
     }
 
     /// Lookup the de-bruijn index and the type annotation of a binder in the

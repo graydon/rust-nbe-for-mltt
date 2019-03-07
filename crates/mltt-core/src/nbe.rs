@@ -92,6 +92,9 @@ pub fn eval(term: &RcTerm, env: &Env<RcValue>) -> Result<RcValue, NbeError> {
             Some(value) => Ok(value.clone()),
             None => Err(NbeError::new("eval: variable not found")),
         },
+        Term::Meta(id) => Err(NbeError::new(
+            "eval: evaluation for metavariables is not yet implemented",
+        )),
         Term::Literal(literal) => Ok(RcValue::from(Value::Literal(literal.clone()))),
         Term::Let(def, body) => {
             let def = eval(def, env)?;
@@ -218,7 +221,10 @@ pub fn read_back_term(level: VarLevel, term: &RcValue) -> Result<RcTerm, NbeErro
 /// Read a neutral value back into the core syntax, normalizing as required.
 pub fn read_back_neutral(level: VarLevel, head: Head, spine: &Spine) -> Result<RcTerm, NbeError> {
     let head = match head {
-        Head::Var(var_level) => RcTerm::from(Term::Var(VarIndex(level.0 - (var_level.0 + 1)))),
+        Head::Var(var_level) => {
+            RcTerm::from(Term::Var(VarIndex(level.0 - (var_level.0 + 1))))
+        },
+        Head::Meta(meta) => RcTerm::from(Term::Meta(meta)),
     };
 
     spine.iter().fold(Ok(head), |acc, elim| match elim {

@@ -91,6 +91,20 @@ impl<T: Clone> Env<T> {
     }
 }
 
+/// Metavariable identifiers
+///
+/// These are used as placeholders for undetermined terms that we will need to
+/// eventually fill in during elaboration. They can also be used to stand for
+/// 'holes' in the concrete syntax, to support type-directed editing.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MetaId(pub u32);
+
+impl From<u32> for MetaId {
+    fn from(src: u32) -> MetaId {
+        MetaId(src)
+    }
+}
+
 /// The level of a universe
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UniverseLevel(pub u32);

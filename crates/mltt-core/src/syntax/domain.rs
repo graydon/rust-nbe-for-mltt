@@ -3,7 +3,57 @@
 use std::rc::Rc;
 
 use crate::syntax::core::RcTerm;
-use crate::syntax::{AppMode, Env, Label, Literal, UniverseLevel, VarLevel};
+use crate::syntax::{AppMode, Env, Label, Literal, MetaId, UniverseLevel, VarLevel};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Rigidity {
+    Rigid,
+    Flex,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MetaEntry {
+    // TODO: Add source location
+    Unsolved,
+    // TODO: Add source location
+    Solved(RcValue),
+}
+
+impl MetaEntry {
+    pub fn rigidity(&self) -> Rigidity {
+        match self {
+            MetaEntry::Unsolved => Rigidity::Flex,
+            MetaEntry::Solved(_) => Rigidity::Rigid,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MetaContext {
+    /// The values to be used during evaluation.
+    entries: im::Vector<MetaEntry>,
+}
+
+impl MetaContext {
+    /// Create a new, empty environment.
+    pub fn new() -> MetaContext {
+        MetaContext {
+            entries: im::Vector::new(),
+        }
+    }
+
+    /// Lookup a metavariable in the environment.
+    pub fn lookup_entry(&self, meta: MetaId) -> Option<&MetaEntry> {
+        self.entries.get(meta.0 as usize)
+    }
+
+    /// Create a fresh metavariable identifier
+    pub fn fresh_meta_id(&mut self) -> MetaId {
+        let meta = MetaId(self.entries.len() as u32);
+        self.entries.push_back(MetaEntry::Unsolved);
+        meta
+    }
+}
 
 /// A closure that binds a single variable.
 ///
@@ -108,6 +158,8 @@ pub type RcType = RcValue;
 pub enum Head {
     /// Variables
     Var(VarLevel),
+    /// Metavariables
+    Meta(MetaId),
 }
 
 /// A spine of eliminators
