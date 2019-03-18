@@ -569,8 +569,8 @@ pub enum Term<'file> {
     /// Case expressions
     Case(
         FileSpan,
-        Box<Term<'file>>,
-        Vec<(Pattern<'file>, Term<'file>)>,
+        Vec<Term<'file>>,
+        Vec<(Vec<IntroParam<'file>>, Term<'file>)>,
     ),
 
     /// Literals
@@ -668,11 +668,14 @@ impl<'file> Term<'file> {
                 .append("else")
                 .append(Doc::space())
                 .append(alternative.to_doc()),
-            Term::Case(_, scrutinee, clauses) => {
+            Term::Case(_, scrutinees, clauses) => {
+                let scrutinees = scrutinees.iter().map(Term::to_doc);
                 let clauses = Doc::intersperse(
-                    clauses.iter().map(|(param, body)| {
+                    clauses.iter().map(|(params, body)| {
+                        let params = params.iter().map(IntroParam::to_doc);
+
                         Doc::nil()
-                            .append(param.to_doc())
+                            .append(Doc::intersperse(params, Doc::space()))
                             .append(Doc::space())
                             .append("=>")
                             .append(Doc::space())
@@ -684,7 +687,7 @@ impl<'file> Term<'file> {
                 Doc::nil()
                     .append("case")
                     .append(Doc::space())
-                    .append(scrutinee.to_doc())
+                    .append(Doc::intersperse(scrutinees, Doc::space()))
                     .append(Doc::space())
                     .append("{")
                     .append(Doc::space())
