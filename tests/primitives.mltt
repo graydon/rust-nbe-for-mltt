@@ -1,0 +1,8 @@
+abort : Fun {A : Type} -> String -> A;
+abort {A = _} = primitive "abort";
+
+u32-to-string : U32 -> String;
+u32-to-string = primitive "u32-to-string";
+
+s32-to-string : S32 -> String;
+s32-to-string = primitive "s32-to-string";
