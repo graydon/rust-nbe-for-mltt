@@ -22,7 +22,7 @@
 //!           | term ":" term
 //!           | "let" item+ "in" term
 //!           | "if" term "then" term "else" term
-//!           | "case" term "{" (intro-param "=>" term ";")* (intro-param "=>" term)? "}"
+//!           | "case" term* "{" (intro-param+ "=>" term ";")* (intro-param+ "=>" term)? "}"
 //!           | STRING_LITERAL
 //!           | CHAR_LITERAL
 //!           | INT_LITERAL
@@ -971,28 +971,29 @@ where
         ))
     }
 
-    /// Parse the trailing part of a case expression
+    /// Parse the trailing part of a let expression
     ///
     /// ```text
-    /// case-expr ::= arg-term(0) "{" (pattern(0) "=>" term(0) ";")* (pattern(0) "=>" term(0))? "}"
+    /// case-expr   ::= arg-term(0)* "{" (case-clause ";")* case-clause? "}"
+    /// case-clause ::= intro-param+ "=>" term(0)
     /// ```
     fn parse_case_expr(
         &mut self,
         start_token: Token<'file>,
     ) -> Result<Term<'file>, Diagnostic<FileSpan>> {
-        let scrutinee = self.parse_arg_term(Prec(0))?;
+        let scrutinees = vec![self.parse_arg_term(Prec(0))?];
 
         self.expect_match(TokenKind::Open(DelimKind::Brace))?;
 
         let mut clauses = Vec::new();
         while !self.is_peek_match(TokenKind::Close(DelimKind::Brace)) {
-            let pattern = self.parse_pattern(Prec(0))?;
+            let params = self.parse_intro_params()?;
 
             self.expect_match(TokenKind::RFatArrow)?;
 
             let body = self.parse_term(Prec(0))?;
 
-            clauses.push((pattern, body));
+            clauses.push((params, body));
 
             if self.try_match(TokenKind::Semicolon).is_some() {
                 continue;
@@ -1000,14 +1001,14 @@ where
                 let end_token = self.expect_match(TokenKind::Close(DelimKind::Brace))?;
                 let span = FileSpan::merge(start_token.span, end_token.span);
 
-                return Ok(Term::Case(span, Box::new(scrutinee), clauses));
+                return Ok(Term::Case(span, scrutinees, clauses));
             }
         }
 
         let end_token = self.expect_match(TokenKind::Close(DelimKind::Brace))?;
         let span = FileSpan::merge(start_token.span, end_token.span);
 
-        Ok(Term::Case(span, Box::new(scrutinee), clauses))
+        Ok(Term::Case(span, scrutinees, clauses))
     }
 
     /// Parse the trailing part of a universe

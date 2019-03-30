@@ -3,8 +3,8 @@ default ignored = case ignored {
     _ => "the common choice";
 };
 
-meaning : U32 -> String;
-meaning magic = case magic {
+meaning-2 : U32 -> String;
+meaning-2 = case {
     7 => "the common choice";
     42 => "life, the universe, and everything";
     13 => "unlucky";
@@ -12,8 +12,15 @@ meaning magic = case magic {
 };
 
 hi-to-bye : String -> String;
-hi-to-bye value = case value {
+hi-to-bye = case {
     "hi" => "bye";
     other => other;
 };
 
+both-zero-3 : U32 -> Char -> String;
+both-zero-3 = case {
+    0 '0' => "yup";
+    0 _   => "almost";
+    _ '0' => "possibly";
+    _ _   => "nope";
+};

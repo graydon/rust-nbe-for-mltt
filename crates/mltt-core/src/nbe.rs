@@ -114,7 +114,10 @@ pub fn eval(term: &RcTerm, env: &Env<RcValue>) -> Result<RcValue, NbeError> {
     match term.as_ref() {
         Term::Var(index) => match env.lookup_entry(*index) {
             Some(value) => Ok(value.clone()),
-            None => Err(NbeError::new("eval: variable not found")),
+            None => Err(NbeError::new(format!(
+                "eval: variable not found: @{}",
+                index.0,
+            ))),
         },
         Term::PrimitiveAbort(_, message) => Err(NbeError::new(format!("abort: {}", message))),
         Term::Let(def, body) => {
